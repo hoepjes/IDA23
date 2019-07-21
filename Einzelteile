@@ -1,6 +1,9 @@
 setwd 
 library(data.table)
+library(lubridate)
 library(dplyr)
+library(readr)
+library(stringr)
 
 T3 <- readLines("Einzelteil_T03.txt")  # read data with readLines
 str(T3)
@@ -22,8 +25,6 @@ Y<-T2[,9:15]
 glimpse(X)
 glimpse(Y)
 rm(T2)
-library(data.table)
-library(stringr)
 X<-as.data.table(X)
 Y<-as.data.table(Y)
 X<-X[!!rowSums(!is.na(X)),]
@@ -42,6 +43,7 @@ names(T2)
 unique(T2$Herstellernummer)
 unique(T2$Werksnummer)
 unique(T2$Fehlerhaft)
+
 ######################### T1
 T1 <- readLines("Einzelteil_T01.txt")  # read data with readLines
 A<-gsub(" | | ", ";", T1, fixed=TRUE)
@@ -57,8 +59,6 @@ glimpse(X)
 glimpse(Y)
 glimpse(Z)
 rm(T1)
-library(data.table)
-library(stringr)
 X<-as.data.table(X)
 Y<-as.data.table(Y)
 Z<-as.data.table(Z)
@@ -80,3 +80,65 @@ unique(T1$Herstellernummer)
 unique(T1$Werksnummer)
 unique(T1$Fehlerhaft)
 
+
+###Auslesen der Tabellen
+T4<-fread(file="Einzelteil_T04.csv",sep=";" ,header= T) 
+T5<-fread(file="Einzelteil_T05.csv", sep=",",header = T)
+T6<-fread(file="Einzelteil_T06.csv",sep=",",header =T)
+
+
+#### Aufräumen Tabelle 4 & 6
+T4<-select(T4,-V1,-X1)
+T4$Produktionsdatum<-as_date(T4$Produktionsdatum_Origin_01011970)
+T4$Fehlerhaft_Datum<-ymd(T4$Fehlerhaft_Datum)
+T4$Werksnummer <-as.factor(T4$Werksnummer)
+T4$Herstellernummer<-as.factor(T4$Herstellernummer)
+T4$Fehlerhaft<-as.factor(T4$Fehlerhaft)
+T4$Produktionsdatum_Origin_01011970 <-NULL 
+T4$origin <- NULL
+T4_Fail<-T4[Fehlerhaft == 1]
+
+T6<-select(T6,-V1,-X1)
+T6$Produktionsdatum<-as_date(T6$Produktionsdatum_Origin_01011970)
+T6$Fehlerhaft_Datum<-ymd(T6$Fehlerhaft_Datum)
+T6$Werksnummer<-as.factor(T6$Werksnummer)
+T6$Herstellernummer<-as.factor(T6$Herstellernummer)
+T6$Fehlerhaft<-as.factor(T6$Fehlerhaft)
+T6$Produktionsdatum_Origin_01011970 <-NULL 
+T6$origin <- NULL
+T6_Fail<-T6[Fehlerhaft == 1]
+
+
+######Verschmelzen der korrekten Tabellen anteilen
+T5<-select(T5,-V1,-X1)
+X<-T5[,1:7]
+glimpse(X)
+Y<-T5[,8:14]
+glimpse(Y)
+
+
+X<-X[!!rowSums(!is.na(X)),]
+Y<-Y[!!rowSums(!is.na(Y)),]
+
+
+new<-str_remove(names(X), ".x")
+old<-names(X)
+setnames(X,old, new)
+
+new<-str_remove(names(Y), ".y")
+old<-names(Y)
+setnames(Y,old, new)
+
+T5<-rbind(Y,X)
+
+
+T5$Fehlerhaft_Datum<-ymd(T5$Fehlerhaft_Datum)
+T5$Werksnummer <-as.factor(T5$Werksnummer)
+T5$Herstellernummer<-as.factor(T5$Herstellernummer)
+T5$Fehlerhaft<-as.factor(T5$Fehlerhaft)
+T5_Fail<-T5[Fehlerhaft == 1]
+
+################entfernen unnützer Objekte
+rm(X,Y,new,old,T4,T5,T6)
+
+###TODO T4 negative Fahrleistung-> nicht möglich
