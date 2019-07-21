@@ -1,0 +1,155 @@
+#################Fahrzeugdatei einlsen
+FZ<-fread(file = "Fahrzeuge_OEM1_Typ11.csv" , sep = ",")
+FZ$Produktionsdatum<-ymd(FZ$Produktionsdatum)
+FZ$Fehlerhaft_Datum<-ymd(FZ$Fehlerhaft_Datum)
+glimpse(FZ)
+FZ<-select(FZ,-V1,-X1) # sieht aus wie rownumbers, braucht niemand, oder???
+FZ$Werksnummer<-as.factor(FZ$Werksnummer)
+FZ$Herstellernummer<-as.factor(FZ$Herstellernummer)
+FZ$Fehlerhaft<-as.factor(FZ$Fehlerhaft)
+
+
+sapply(FZ, class)
+
+
+######### Checken ob Daten ok sind
+head(FZ_Fail)
+unique(FZ_Fail$Herstellernummer)
+unique(FZ_Fail$Werksnummer)
+sapply(FZ_Fail, class)
+unique(FZ$Fehlerhaft)
+hist(FZ_Fail$Fehlerhaft_Fahrleistung)
+hist(FZ$Fehlerhaft)
+names(FZ)
+head(F_Fail)
+head(FZ)
+tail(FZ)
+str(FZ)
+summary(FZ)
+any(is.na(FZ$ID_Fahrzeug))
+
+########## Nur die mit Fehler in extra Tabelle
+FZ_Fail <- FZ[Fehlerhaft==1] #nur die Fehlerhaften --> ist aber fehler am ganzen auto und nicht nur wegen Motos
+#names(FZ)
+glimpse(FZ_Fail)
+
+
+################# Fahrzeugbestandteile ##################
+FZB<-fread(file = "Bestandteile_Fahrzeuge_OEM1_Typ11.csv" , sep = ";", drop=1, header = TRUE) #erste spalte is komisch und header
+FZB
+head(FZB, n=10)
+names(FZB)
+tail(FZB)
+glimpse(FZB)
+any(is.na(FZB$ID_Fahrzeug))
+any(is.na(FZB$ID_Motor))
+FZB<-separate(FZB,ID_Motor, into=c("Motor", "Hersteller", "Werk", "lfdNummer"), sep="-")
+unique(FZB$Motor)
+unique(FZB$Hersteller)
+unique(FZB$Werk)
+FZB$lfdNummer<-as.numeric(FZB$lfdNummer)
+summary(FZB$lfdNummer)
+################ Komponenten K1BE1.csv ##################
+
+K_BE<-fread(file = "Komponente_K1BE1.csv" , sep = ",")
+glimpse(K_BE)
+K_BE<-select(K_BE,-V1, -X1,-origin)
+K_BE$Fehlerhaft_Datum<-ymd(K_BE$Fehlerhaft_Datum)
+K_BE$Motortyp<-"K1_BE1"
+head(K_BE)
+glimpse(K_BE)
+K_BE$Produktionsdatum_Origin_01011970<-as_date(K_BE$Produktionsdatum_Origin_01011970)
+setnames(K_BE,"Produktionsdatum_Origin_01011970","Produktionsdatum")
+K_BE_Fail <- K_BE[Fehlerhaft==1] #nur die Fehlerhaften
+glimpse(K_BE_Fail)
+any(is.na(K_BE$Fehlerhaft))
+any(is.na(K_BE_Fail$ID_Motor))
+unique(K_BE$Fehlerhaft)
+K_BE$Herstellernummer<-as.factor(K_BE$Herstellernummer)
+K_BE$Werksnummer<-as.factor(K_BE$Werksnummer)
+K_BE$Fehlerhaft<-as.factor(K_BE$Fehlerhaft)
+
+
+################ Komponenten K1DI1.csv ##################
+
+K_DI<-fread(file = "Komponente_K1DI1.csv" , sep = ",")
+head(K_DI)
+glimpse(K_DI)
+unique(K_DI$Herstellernummer)
+unique(K_DI$Herstellernummer.x)
+unique(K_DI$Herstellernummer.y)
+K_DI<-select(K_DI,-V1, -X1,)
+################### Was ist mit Tabelle Kaputt?
+any(is.na(K_DI$Fehlerhaft.x)) #TRUE
+summary(as.factor(K_DI$Fehlerhaft.x))
+any(is.na(K_DI$Fehlerhaft.y)) #TRUE
+summary(as.factor(K_DI$Fehlerhaft.y))
+any(is.na(K_DI$Fehlerhaft)) #TRUE
+summary(as.factor(K_DI$Fehlerhaft))
+F_tb<-select(K_DI,Fehlerhaft.x)
+test_x<-which(is.na(K_DI$Fehlerhaft.x))
+str(test_x)
+glimpse(test_x)
+test_y<-which(is.na(K_DI$Fehlerhaft.y))
+identical(test_x, test_y)
+str(test_y)
+test_<-which(is.na(K_DI$Fehlerhaft))
+identical(test_x, test_)
+str(test_)
+any(is.na(K_DI_Fail$ID_Motor))
+summary(K_DI$Fehlerhaft)
+
+############################# 3 Teile zusammenfügen
+
+
+X<-K_DI[,1:7]
+glimpse(X)
+Y<-K_DI[,8:14]
+glimpse(Y)
+Z<-K_DI[,15:21]
+glimpse(Z)
+
+X<-X[!!rowSums(!is.na(X)),]
+Y<-Y[!!rowSums(!is.na(Y)),]
+Z<-Z[!!rowSums(!is.na(Z)),]
+
+new<-str_remove(names(X), ".x")
+old<-names(X)
+setnames(X,old, new)
+
+new<-str_remove(names(Y), ".y")
+old<-names(Y)
+setnames(Y,old, new)
+
+K_DI<-rbind(Y,Z)
+K_DI<-rbind(K_DI,X)
+
+K_DI$Motortyp<-"K1_DI1"
+K_DI$Herstellernummer<-as.factor(K_DI$Herstellernummer)
+K_DI$Werksnummer<-as.factor(K_DI$Werksnummer)
+K_DI$Fehlerhaft<-as.factor(K_DI$Fehlerhaft)
+K_DI$Fehlerhaft_Datum<-ymd(K_DI$Fehlerhaft_Datum)
+K_DI$Produktionsdatum<-ymd(K_DI$Produktionsdatum)
+
+
+
+glimpse(X)
+glimpse(Y)
+glimpse(Z)
+
+glimpse(K_DI)
+
+############## Alle Fehlerhaften Motoren
+
+K_DI_Fail<-K_DI[Fehlerhaft == 1]
+glimpse(K_DI_Fail)
+
+
+
+
+
+############## Beide Komponentenlisten in eine #######
+
+total_Fail<- rbind(K_DI_Fail, K_BE_Fail)
+glimpse(total_Fail)
+unique(total_Fail$Motortyp)
