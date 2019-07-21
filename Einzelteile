@@ -1,0 +1,82 @@
+setwd 
+library(data.table)
+library(dplyr)
+
+T3 <- readLines("Einzelteil_T03.txt")  # read data with readLines
+str(T3)
+A<-gsub("\v", "\n", T3)
+T3<-read.table(text=A, sep="|")
+glimpse(T3)
+unique(T3$origin)
+unique(T3$Herstellernummer)
+unique(T3$Werksnummer)
+unique(T3$Fehlerhaft)
+##################################
+T2 <- readLines("Einzelteil_T02.txt")  # read data with readLines
+A<-gsub("\t", "\n", T2)
+T2<-read.table(text=A)
+glimpse(T2)
+rm(A)
+X<-T2[,2:8]
+Y<-T2[,9:15]
+glimpse(X)
+glimpse(Y)
+rm(T2)
+library(data.table)
+library(stringr)
+X<-as.data.table(X)
+Y<-as.data.table(Y)
+X<-X[!!rowSums(!is.na(X)),]
+Y<-Y[!!rowSums(!is.na(Y)),]
+new<-str_remove(names(X), ".x")
+old<-names(X)
+setnames(X,old, new)
+
+new<-str_remove(names(Y), ".y")
+old<-names(Y)
+setnames(Y,old, new)
+T2<-rbind(X,Y)
+rm(X)
+rm(Y)
+names(T2)
+unique(T2$Herstellernummer)
+unique(T2$Werksnummer)
+unique(T2$Fehlerhaft)
+######################### T1
+T1 <- readLines("Einzelteil_T01.txt")  # read data with readLines
+A<-gsub(" | | ", ";", T1, fixed=TRUE)
+B<-gsub(" ", "\n", A)
+T1<-read.table(text=B,sep=";")
+glimpse(T1)
+rm(A,B)
+
+X<-T1[,2:8]
+Y<-T1[,9:15]
+Z<-T1[,16:22]
+glimpse(X)
+glimpse(Y)
+glimpse(Z)
+rm(T1)
+library(data.table)
+library(stringr)
+X<-as.data.table(X)
+Y<-as.data.table(Y)
+Z<-as.data.table(Z)
+X<-X[!!rowSums(!is.na(X)),]
+Y<-Y[!!rowSums(!is.na(Y)),]
+Z<-Z[!!rowSums(!is.na(Z)),]
+new<-str_remove(names(X), ".x")
+old<-names(X)
+setnames(X,old, new)
+new<-str_remove(names(Y), ".y")
+old<-names(Y)
+setnames(Y,old, new)
+T1<-rbind(X,Y)
+T1<-rbind(T1,Z)
+rm(X)
+rm(Y)
+names(T1)
+unique(T1$Herstellernummer)
+unique(T1$Werksnummer)
+unique(T1$Fehlerhaft)
+
