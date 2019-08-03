@@ -1,0 +1,107 @@
+setwd
+library(data.table)
+library(lubridate)
+library(dplyr)
+library(readr)
+library(stringr)
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(readxl)
+library(leaflet)
+library(shiny)
+
+#######################################Geodaten_Gemeinden einlesen 
+setwd(paste0(getwd(), "/Geodaten"))
+gemeinden <- fread(file = "Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv", sep= ";") 
+glimpse(gemeinden)
+identical(gemeinden$V1,gemeinden$X)
+gemeinden <- select(gemeinden, -V1, -X)
+head(gemeinden)
+str(gemeinden)
+gemeinden$Laengengrad <- as.numeric(gsub(",", ".", gemeinden$Laengengrad))
+gemeinden$Breitengrad <- as.numeric(gsub(",", ".", gemeinden$Breitengrad))
+str(gemeinden)
+
+
+########################################plot the geodaten
+g <- list(
+  scope = 'europe')
+
+plot_geo(gemeinden) %>%
+  add_markers(
+    y=~Breitengrad, x=~Laengengrad, hoverinfo="Gemeinde",
+  )%>%
+  layout(geo = g
+  )
+
+########################################Tier1_Werke einlesen
+
+Tier1 <- fread(file = "Tier1_Werke_2017-07-11_v1.2_TrR.csv", encoding = "UTF-8")
+head(Tier1) # wie kann man diese deutsche Umlaut ÖÜÄ ändern
+Tier1<- Tier1[-c(23:45),]
+Tier1$Tiertype <- "1"
+
+########################################Tier2_Werke einlesen
+
+Tier2 <- fread(file = "Tier2_Werke_2017-07-11_v1.2_TrR.csv", encoding = "UTF-8")
+Tier2 <- Tier2[,-c(6:18)]
+Tier2$Tiertype <- "2"
+
+########################################OEM_Werke einlesen
+
+OEM <- fread(file = "OEM_Werke_2017-07-04_TrR.csv", encoding = "UTF-8")
+OEM$Tiertype <- "o"
+
+########################################Werke zusammenführen 
+
+werke <- rbind(Tier1, Tier2)
+werke <- rbind(werke, OEM)
+
+############visualizing three types of werke on a map
+names(werke)
+colnames(werke)[5] <- "Laengengrad"
+
+plot_geo(werke) %>%
+  add_markers(
+    y=~Breitengrad, x=~Laengengrad, hoverinfo=~ORT, color=~ Tiertype
+  )%>%
+  layout(geo = g
+  )
+
+########################################the App
+
+ui <- fluidPage(
+  titlePanel("Our Factories in Europe 🚗🚗🚗"),
+  sidebarLayout(
+    sidebarPanel(radioButtons(inputId = "selectedFactorytype", "Select a type: ", choices = list("Tier1", "Tier2", "OEM"))),
+    
+    mainPanel(
+      plotOutput(outputId = "plot")
+    )
+  )
+  
+)
+
+server <- function(input, output) {
+  
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      setView(lng = 13.4, lat = 52.52, zoom = 11) %>%
+      addTiles()
+  })
+  
+  observe({
+    input$reset
+    leafletProxy("map") %>%
+      setView(lng = 13.4, lat = 52.52, zoom = 11)
+    
+    
+  })
+  
+}
+
+shinyApp(ui, server)
+
+#####################################################################
+
